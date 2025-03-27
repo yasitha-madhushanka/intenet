@@ -1,1 +1,145 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Information</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        .info-card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .info-item {
+            margin: 15px 0;
+            font-size: 18px;
+        }
+        .label {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .value {
+            color: #3498db;
+        }
+        #speedValue {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .speed-units {
+            font-size: 16px;
+        }
+        .loading {
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <h1>Your Network Information</h1>
+    
+    <div class="info-card">
+        <div class="info-item">
+            <span class="label">IP Address:</span>
+            <span class="value" id="ipAddress">Loading...</span>
+        </div>
+        <div class="info-item">
+            <span class="label">Country:</span>
+            <span class="value" id="country">Loading...</span>
+        </div>
+        <div class="info-item">
+            <span class="label">Internet Speed:</span>
+            <span class="value">
+                <span id="speedValue" class="loading">Testing...</span>
+                <span class="speed-units">Mbps</span>
+            </span>
+        </div>
+        <button id="retrySpeed">Test Speed Again</button>
+    </div>
+
+    <script>
+        // Fetch IP and country information
+        fetch('https://api.ipify.org?format=json')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('ipAddress').textContent = data.ip;
+                return fetch(`https://ipapi.co/${data.ip}/json/`);
+            })
+            .then(response => response.json())
+            .then(locationData => {
+                document.getElementById('country').textContent = 
+                    `${locationData.country_name} (${locationData.country_code})`;
+            })
+            .catch(error => {
+                console.error('Error fetching IP/country:', error);
+                document.getElementById('ipAddress').textContent = 'Error fetching IP';
+                document.getElementById('country').textContent = 'Error fetching country';
+            });
+
+        // Internet speed test
+        function testSpeed() {
+            const speedValue = document.getElementById('speedValue');
+            speedValue.textContent = 'Testing...';
+            speedValue.className = 'loading';
+            
+            // This is a simple speed test that measures download speed
+            const startTime = performance.now();
+            const fileSize = 5 * 1024 * 1024; // 5MB test file
+            const testFileUrl = `https://httpbin.org/bytes/${fileSize}?${startTime}`;
+            
+            fetch(testFileUrl)
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.blob();
+                })
+                .then(() => {
+                    const endTime = performance.now();
+                    const duration = (endTime - startTime) / 1000; // in seconds
+                    const bitsLoaded = fileSize * 8; // convert bytes to bits
+                    const speedMbps = (bitsLoaded / duration / (1024 * 1024)).toFixed(2);
+                    
+                    speedValue.textContent = speedMbps;
+                    speedValue.className = 'value';
+                })
+                .catch(error => {
+                    console.error('Speed test error:', error);
+                    speedValue.textContent = 'Error';
+                    speedValue.className = 'value';
+                });
+        }
+
+        // Initial speed test
+        testSpeed();
+        
+        // Retry button
+        document.getElementById('retrySpeed').addEventListener('click', testSpeed);
+    </script>
+</body>
+</html>
